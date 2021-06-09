@@ -85,13 +85,20 @@ MalType read_atom(Reader & reader) {
 }
 
 MalType read_form(Reader & reader) {
+    MalType result;
     std::string* token = reader.peek();
     if (!token) {
+        throw std::runtime_error("read error: empty input");
     } else if (*token == "("){
-        return read_list(reader);
+        result = read_list(reader);
     } else {
-        return read_atom(reader);
+        result = read_atom(reader);
     }
+    bool still_has_token = reader.peek();
+    if (still_has_token) {
+        throw std::runtime_error("read error: tokens not totally consumed");
+    }
+    return result;
 }
 
 MalType read_str(std::string str) {

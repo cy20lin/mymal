@@ -25,6 +25,8 @@ public:
     MalSymbol(MalSymbol &&) = default;
     // using std::string::operator=;
     std::string str() const { return *static_cast<const std::string*>(this);}
+    MalSymbol & operator=(const MalSymbol &) = default;
+    MalSymbol & operator=(MalSymbol &&) = default;
 };
 
 using MalTypeVariant =
@@ -46,6 +48,8 @@ public:
     MalType(Ts...ts): MalTypeVariant(std::forward<Ts>(ts)...) {}
     MalType(MalType&&) = default;
     MalType(const MalType&) = default;
+    MalType& operator=(const MalType &) = default;
+    MalType& operator=(MalType &&) = default;
 };
 
 #endif//MAL_TYPES_HPP_INCLUDED
