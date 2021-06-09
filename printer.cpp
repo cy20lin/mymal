@@ -1,0 +1,52 @@
+#include "printer.hpp"
+#include <iostream>
+#include <sstream>
+#include <type_traits>
+
+std::string pr_str(const MalType & value) {
+    const auto visitor = [](auto&& arg) -> std::string {
+        using T = std::decay_t<decltype(arg)>;
+        std::stringstream out;
+        if constexpr (std::is_same_v<T, MalNil>) {
+            out << "nil" << std::flush;
+        }
+        else if constexpr (std::is_same_v<T, MalBool>) {
+            out << std::boolalpha << arg << std::flush;
+        }
+        else if constexpr (std::is_same_v<T, MalInt>){
+            out << arg << std::flush;
+        }
+        else if constexpr (std::is_same_v<T, MalFloat>){
+            out << arg << std::flush;
+        }
+        else if constexpr (std::is_same_v<T, MalSymbol>) {
+            out <<  arg.str() << std::flush;
+        }
+        else if constexpr (std::is_same_v<T, MalString>){
+            out << "\"" << arg << "\"" << std::flush;
+        }
+        else if constexpr (std::is_same_v<T, MalList>) {
+            if (arg.empty()) {
+                out << "()" << std::flush;
+            } else if (arg.size() == 1) {
+                out << "(" << pr_str(arg.front()) << ")" << std::flush;
+            } else {
+                out << "(";
+                for (auto & item : arg) {
+                    out << pr_str(item);
+                    out << (&item != &arg.back() ? " " : ")");
+                    out << std::flush;
+                }
+            }
+        } 
+        else {
+            static_assert("no such type");
+        }
+        return out.str();
+    };
+    // https://stackoverflow.com/questions/51309467/using-stdvisit-on-a-class-inheriting-from-stdvariant-libstdc-vs-libc
+    return std::visit(visitor, static_cast<const MalTypeVariant&>(value));
+
+}
+
+
