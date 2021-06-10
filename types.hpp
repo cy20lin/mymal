@@ -1,10 +1,11 @@
 #ifndef MAL_TYPES_HPP_INCLUDED
 #define MAL_TYPES_HPP_INCLUDED
 #include <variant>
-#include <vector>
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <forward_list>
+#include <vector>
 #include <map>
 #include <functional>
 
@@ -33,7 +34,8 @@ using MalInt = std::intmax_t;
 using MalFloat = double;
 using MalString = std::string;
 class MalSymbol;
-using MalList = std::vector<MalType>;
+using MalList = std::forward_list<MalType>;
+using MalVector = std::vector<MalType>;
 using MalMap = std::map<MalType,MalType>;
 using MalFunction = std::function<MalType(MalType)>;
 
@@ -60,6 +62,7 @@ using MalTypeVariant =
         MalString,
         MalSymbol,
         MalList,
+        MalVector,
         MalMap
         // MalFunction
     >;

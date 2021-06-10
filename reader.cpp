@@ -56,8 +56,9 @@ MalType read_list(Reader & reader) {
     } else {
         throw std::runtime_error("read error: invalid list begin, missing '('");
     }
+    auto i = result.before_begin();
     while(reader.peek() && *reader.peek() != ")") {
-        result.push_back(read_form(reader));
+        i = result.insert_after(i, read_form(reader));
     }
     token = reader.peek();
     if (*token == ")") {
@@ -65,6 +66,26 @@ MalType read_list(Reader & reader) {
         return result;
     } else {
         throw std::runtime_error("read error: invalid list end, missing ')'");
+    }
+}
+
+MalType read_vector(Reader & reader) { 
+    MalVector result;
+    auto * token = reader.peek();
+    if (*token == "["){
+        reader.next();
+    } else {
+        throw std::runtime_error("read error: invalid list begin, missing '['");
+    }
+    while(reader.peek() && *reader.peek() != "]") {
+        result.push_back(read_form(reader));
+    }
+    token = reader.peek();
+    if (*token == "]") {
+        reader.next();
+        return result;
+    } else {
+        throw std::runtime_error("read error: invalid list end, missing ']'");
     }
 }
 
@@ -114,6 +135,8 @@ MalType read_form(Reader & reader) {
         throw std::runtime_error("read error: empty input");
     } else if (*token == "("){
         result = read_list(reader);
+    } else if (*token == "["){
+        result = read_vector(reader);
     } else if (*token == "{"){
         result = read_map(reader);
     } else {
