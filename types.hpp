@@ -37,8 +37,25 @@ class MalSymbol;
 using MalList = std::forward_list<MalType>;
 using MalVector = std::vector<MalType>;
 using MalMap = std::map<MalType,MalType>;
-using MalFunction = std::function<MalType(MalType)>;
+// using MalFunction = std::function<MalType(MalType)>;
 
+class NotImplementedException : public std::logic_error
+{
+public:
+    NotImplementedException () : std::logic_error{"function not implemented"} {}
+};
+using MalFunctionBase = std::function<MalType(MalType)>;
+struct MalFunction : MalFunctionBase {
+    using MalFunctionBase::MalFunctionBase;
+    MalFunction(const MalFunction&)=default;
+    MalFunction(MalFunction&&)=default;
+    MalFunction& operator=(const MalFunction&)=default;
+    MalFunction& operator=(MalFunction&&)=default;
+    bool operator<(const MalFunction&) const { throw NotImplementedException{}; }
+    bool operator>(const MalFunction&) const { throw NotImplementedException{}; }
+    bool operator<=(const MalFunction&) const { throw NotImplementedException{}; }
+    bool operator>=(const MalFunction&) const { throw NotImplementedException{}; }
+};
 
 class MalSymbol : public std::string {
 public:
@@ -63,8 +80,8 @@ using MalTypeVariant =
         MalSymbol,
         MalList,
         MalVector,
-        MalMap
-        // MalFunction
+        MalMap,
+        MalFunction
     >;
 
 class MalType : public MalTypeVariant
