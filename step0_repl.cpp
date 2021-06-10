@@ -9,6 +9,8 @@ std::string readline() {
 }
 
 std::string READ() {
+    const char* prompt = "user> ";
+    std::cout << prompt << std::flush;
     return readline();
 }
 
@@ -22,8 +24,7 @@ void printline(std::string value) {
 }
 
 void PRINT(std::string value) {
-    static const std::string prefix = "user>";
-    printline(prefix + value);
+    printline(value);
 }
 
 void rep() {

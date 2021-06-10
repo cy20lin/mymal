@@ -11,6 +11,8 @@ std::string readline() {
 }
 
 MalType READ() {
+    const char* prompt = "user> ";
+    std::cout << prompt << std::flush;
     return read_str(readline());
 }
 
@@ -24,8 +26,7 @@ void printline(std::string value) {
 }
 
 void PRINT(MalType value) {
-    static const std::string prefix = "user>";
-    printline(prefix + pr_str(value));
+    printline(pr_str(value));
 }
 
 void rep() {
