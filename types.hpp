@@ -5,16 +5,37 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <map>
+#include <functional>
+
 
 class MalType;
-using MalNil = std::monostate;
+
+using MalUndefined = std::monostate;
+
+class MalNil {
+public:
+    MalNil() = default;
+    MalNil(const MalNil &) = default;
+    MalNil & operator=(const MalNil &) = default;
+    void* data_;
+};
+constexpr bool operator!=(MalNil,MalNil) noexcept { return false; }
+constexpr bool operator<(MalNil,MalNil) noexcept { return false; }
+constexpr bool operator>(MalNil,MalNil) noexcept { return false; }
+constexpr bool operator==(MalNil,MalNil) noexcept { return true; }
+constexpr bool operator<=(MalNil,MalNil) noexcept { return true; }
+constexpr bool operator>=(MalNil,MalNil) noexcept { return true; }
+
+//TODO: Do we need cons data type ?
 using MalBool = bool;
 using MalInt = std::intmax_t;
 using MalFloat = double;
 using MalString = std::string;
 class MalSymbol;
 using MalList = std::vector<MalType>;
-// using MalMap = std::map<MalType,MalType>;
+using MalMap = std::map<MalType,MalType>;
+using MalFunction = std::function<MalType(MalType)>;
 
 
 class MalSymbol : public std::string {
@@ -31,13 +52,16 @@ public:
 
 using MalTypeVariant =
     std::variant<
+        MalUndefined,
         MalNil,
         MalBool,
         MalInt,
         MalFloat,
         MalString,
         MalSymbol,
-        MalList
+        MalList,
+        MalMap
+        // MalFunction
     >;
 
 class MalType : public MalTypeVariant

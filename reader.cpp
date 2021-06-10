@@ -22,9 +22,32 @@ std::string * Reader::next() {
 std::string * Reader::peek() {
     return begin_ == end_ ? nullptr : begin_;
 }
-MalType read_list(Reader & reader);
-MalType read_atom(Reader & reader);
-MalType read_form(Reader & reader);
+
+MalType read_map(Reader & reader) { 
+    MalMap result;
+    MalMap::value_type pair;
+    auto * token = reader.peek();
+    if (*token == "{"){
+        reader.next();
+    } else {
+        throw std::runtime_error("read error: invalid list begin, missing '{'");
+    }
+    while(reader.peek() && *reader.peek() != "}") {
+        auto k = read_form(reader);
+        if (!reader.peek() || *reader.peek() == "}")
+            throw std::runtime_error("read error: map should contains even number of items");
+        auto v = read_form(reader);
+        result.insert_or_assign(std::move(k), std::move(v));
+    }
+    token = reader.peek();
+    if (*token == "}") {
+        reader.next();
+        return result;
+    } else {
+        throw std::runtime_error("read error: invalid map end, missing '}'");
+    }
+}
+
 MalType read_list(Reader & reader) { 
     MalList result;
     auto * token = reader.peek();
@@ -91,12 +114,10 @@ MalType read_form(Reader & reader) {
         throw std::runtime_error("read error: empty input");
     } else if (*token == "("){
         result = read_list(reader);
+    } else if (*token == "{"){
+        result = read_map(reader);
     } else {
         result = read_atom(reader);
-    }
-    bool still_has_token = reader.peek();
-    if (still_has_token) {
-        throw std::runtime_error("read error: tokens not totally consumed");
     }
     return result;
 }
@@ -104,7 +125,12 @@ MalType read_form(Reader & reader) {
 MalType read_str(std::string str) {
     auto tokens = tokenize(str);
     auto reader = Reader(tokens.data(), tokens.size());
-    return read_form(reader);
+    auto result = read_form(reader);
+    bool still_has_token = reader.peek();
+    if (still_has_token) {
+        throw std::runtime_error("read error: tokens not totally consumed");
+    }
+    return result;
 }
 
 

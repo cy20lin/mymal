@@ -23,5 +23,9 @@ private:
 
 MalType read_str(std::string);
 std::vector<std::string> tokenize(std::string str);
+MalType read_form(Reader & reader);
+MalType read_atom(Reader & reader);
+MalType read_list(Reader & reader);
+MalType read_map(Reader & reader);
 
 #endif//MAL_READER_HPP_INCLUDED

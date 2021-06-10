@@ -28,13 +28,27 @@ std::string pr_str(const MalType & value) {
         else if constexpr (std::is_same_v<T, MalList>) {
             if (arg.empty()) {
                 out << "()" << std::flush;
-            } else if (arg.size() == 1) {
-                out << "(" << pr_str(arg.front()) << ")" << std::flush;
             } else {
                 out << "(";
                 for (auto & item : arg) {
                     out << pr_str(item);
                     out << (&item != &arg.back() ? " " : ")");
+                    out << std::flush;
+                }
+            }
+        } 
+        else if constexpr (std::is_same_v<T, MalMap>) {
+            if (arg.empty()) {
+                out << "{}" << std::flush;
+            } else {
+                std::size_t n = arg.size();
+                out << "{";
+                std::size_t i = 0;
+                for (auto & item : arg) {
+                    out << pr_str(item.first);
+                    out << " ";
+                    out << pr_str(item.second);
+                    out << (++i < n ? " " : "}");
                     out << std::flush;
                 }
             }
