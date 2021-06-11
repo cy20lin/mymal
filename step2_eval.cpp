@@ -50,42 +50,114 @@ MalFunction wrap_fn(F fn) {
         }, array_args);
     };
 }
+
 using Environment = MalMap; 
 Environment& get_repl_env() {
     static Environment e;
-    auto err = [](auto&&...) -> MalUndefined { throw std::runtime_error("eval error: no such operator"); };
-    auto add = overloaded {std::plus<MalInt>{}, std::plus<MalFloat>{}, std::plus<MalString>{}, err};
-    auto sub = overloaded {std::minus<MalInt>{}, std::minus<MalFloat>{}, std::minus<MalString>{}, err};
-    auto div = overloaded {std::divides<MalInt>{}, std::divides<MalFloat>{}, err};
-    auto mul = overloaded {std::multiplies<MalInt>{}, std::multiplies<MalFloat>{}, err};
-    auto mod = overloaded {std::modulus<MalInt>{}, std::modulus<MalFloat>{}, err};
-
-    e[MalSymbol("+")] = wrap_fn<2>(add);
-    e[MalSymbol("-")] = wrap_fn<2>(sub);
-    e[MalSymbol("*")] = wrap_fn<2>(mul);
-    e[MalSymbol("/")] = wrap_fn<2>(div);
+    // auto err = [](auto&&...) -> MalUndefined { throw std::runtime_error("eval error: no such operator"); };
+    // auto add = overloaded {std::plus<MalInt>{}, std::plus<MalFloat>{}, std::plus<MalString>{}, err};
+    // auto sub = overloaded {std::minus<MalInt>{}, std::minus<MalFloat>{}, std::minus<MalString>{}, err};
+    // auto div = overloaded {std::divides<MalInt>{}, std::divides<MalFloat>{}, err};
+    // auto mul = overloaded {std::multiplies<MalInt>{}, std::multiplies<MalFloat>{}, err};
+    // auto mod = overloaded {std::modulus<MalInt>{}, std::modulus<MalFloat>{}, err};
+    // auto add = [](MalType args) -> MalType {
+    //     MalList list = std::get<MalList>(args.variant());
+    //     return MalInt(1);
+    // };
+    auto add = [](MalType args) -> MalType {
+        auto a = to_array_args<2>(args);
+        if (a[0].get_if<MalInt>() && a[1].get_if<MalInt>()) {
+            return MalInt(a[0].get<MalInt>() + a[1].get<MalInt>());
+        }
+        if (a[0].get_if<MalInt>() && a[1].get_if<MalFloat>()) {
+            return MalFloat(a[0].get<MalInt>() + a[1].get<MalFloat>());
+        }
+        if (a[0].get_if<MalFloat>() && a[1].get_if<MalInt>()) {
+            return MalFloat(a[0].get<MalFloat>() + a[1].get<MalInt>());
+        }
+        if (a[0].get_if<MalFloat>() && a[1].get_if<MalFloat>()) {
+            return MalInt(a[0].get<MalFloat>() + a[1].get<MalFloat>());
+        }
+        if (a[0].get_if<MalString>() && a[1].get_if<MalString>()) {
+            return MalString(a[0].get<MalString>() + a[1].get<MalString>());
+        }
+        throw std::runtime_error("eval error: add: invalid arguments");
+    };
+    auto sub = [](MalType args) -> MalType {
+        auto a = to_array_args<2>(args);
+        if (a[0].get_if<MalInt>() && a[1].get_if<MalInt>()) {
+            return MalInt(a[0].get<MalInt>() - a[1].get<MalInt>());
+        }
+        if (a[0].get_if<MalInt>() && a[1].get_if<MalFloat>()) {
+            return MalFloat(a[0].get<MalInt>() - a[1].get<MalFloat>());
+        }
+        if (a[0].get_if<MalFloat>() && a[1].get_if<MalInt>()) {
+            return MalFloat(a[0].get<MalFloat>() - a[1].get<MalInt>());
+        }
+        if (a[0].get_if<MalFloat>() && a[1].get_if<MalFloat>()) {
+            return MalFloat(a[0].get<MalFloat>() - a[1].get<MalFloat>());
+        }
+        throw std::runtime_error("eval error: sub: invalid arguments");
+    };
+    auto mul = [](MalType args) -> MalType {
+        auto a = to_array_args<2>(args);
+        if (a[0].get_if<MalInt>() && a[1].get_if<MalInt>()) {
+            return MalInt(a[0].get<MalInt>() * a[1].get<MalInt>());
+        }
+        if (a[0].get_if<MalInt>() && a[1].get_if<MalFloat>()) {
+            return MalFloat(a[0].get<MalInt>() * a[1].get<MalFloat>());
+        }
+        if (a[0].get_if<MalFloat>() && a[1].get_if<MalInt>()) {
+            return MalFloat(a[0].get<MalFloat>() * a[1].get<MalInt>());
+        }
+        if (a[0].get_if<MalFloat>() && a[1].get_if<MalFloat>()) {
+            return MalFloat(a[0].get<MalFloat>() * a[1].get<MalFloat>());
+        }
+        throw std::runtime_error("eval error: mul: invalid arguments");
+    };
+    auto div = [](MalType args) -> MalType {
+        auto a = to_array_args<2>(args);
+        if (a[0].get_if<MalInt>() && a[1].get_if<MalInt>()) {
+            return MalInt(a[0].get<MalInt>() / a[1].get<MalInt>());
+        }
+        if (a[0].get_if<MalInt>() && a[1].get_if<MalFloat>()) {
+            return MalFloat(a[0].get<MalInt>() / a[1].get<MalFloat>());
+        }
+        if (a[0].get_if<MalFloat>() && a[1].get_if<MalInt>()) {
+            return MalFloat(a[0].get<MalFloat>() / a[1].get<MalInt>());
+        }
+        if (a[0].get_if<MalFloat>() && a[1].get_if<MalFloat>()) {
+            return MalFloat(a[0].get<MalFloat>() / a[1].get<MalFloat>());
+        }
+        throw std::runtime_error("eval error: div: invalid arguments");
+    };
+    e[MalSymbol("+")] = MalFunction(add);
+    e[MalSymbol("-")] = MalFunction(sub);
+    e[MalSymbol("*")] = MalFunction(mul);
+    e[MalSymbol("/")] = MalFunction(div);
     return e;
 }
 
+MalType READ(std::string str) {
+    return read_str(str);
+}
+
+MalType EVAL(MalType ast, Environment & env);
 MalType eval_ast(MalType ast, Environment & env) {
     if (MalSymbol *p = std::get_if<MalSymbol>(&ast.variant())) {
         return env.at(ast);
     } 
     else if (MalList *p = std::get_if<MalList>(&ast.variant())) {
         MalList list;
-        auto i = p->before_begin();
+        auto i = list.before_begin();
         std::for_each(p->begin(), p->end(), [&](MalType& v){
-            i = list.insert_after(i, v);
+            i = list.insert_after(i, EVAL(v, env));
         });
         return list;
     } 
     else {
         return ast;
     } 
-}
-
-MalType READ(std::string str) {
-    return read_str(str);
 }
 
 MalType EVAL(MalType ast, Environment & env) {
@@ -96,7 +168,9 @@ MalType EVAL(MalType ast, Environment & env) {
         return ast;
     } else {
         MalList fn_args = std::get<MalList>(eval_ast(ast, env).variant());
-        MalFunction fn = std::move(std::get<MalFunction>(fn_args.front()));
+        MalFunction* fnp = std::get_if<MalFunction>(&fn_args.front().variant());
+        if (!fnp) throw std::runtime_error("eval error: not a function object for call");
+        MalFunction fn = std::move(*fnp);
         fn_args.pop_front();
         MalList& args = fn_args;
         return fn(args);

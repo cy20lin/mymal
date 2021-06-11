@@ -115,11 +115,11 @@ MalType read_atom(Reader & reader) {
     if (is_bool(*token)) {
         return MalBool(*token != "false");
     } 
-    if (is_float(*token)) {
-        return MalFloat(std::stod(*token));
-    } 
     if (is_integer(*token)) {
         return MalInt(std::stoll(*token));
+    } 
+    if (is_float(*token)) {
+        return MalFloat(std::stod(*token));
     } 
     if (is_string(*token)) {
         // TODO: parse string literal

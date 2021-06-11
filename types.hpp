@@ -101,10 +101,10 @@ public:
     MalTypeVariant && variant() && { return static_cast<MalTypeVariant&&>(*this);}
     const MalTypeVariant & variant() const & { return *this;}
     const MalTypeVariant && variant() const && {return static_cast<const MalTypeVariant&&>(*this);}
-    template <std::size_t N> decltype(auto) get() {return std::get<N>(variant()); }
-    template <typename T> decltype(auto) get() {return std::get<T>(variant()); }
-    template <std::size_t N> decltype(auto) get_if() {return std::get_if<N>(variant()); }
-    template <typename T> decltype(auto) get_if() {return std::get_if<T>(variant()); }
+    template <std::size_t N> auto get() {return std::get<N>(variant()); }
+    template <typename T> auto get() {return std::get<T>(variant()); }
+    template <std::size_t N> auto* get_if() {return std::get_if<N>(&variant()); }
+    template <typename T> auto* get_if() {return std::get_if<T>(&variant()); }
 };
 
 #endif//MAL_TYPES_HPP_INCLUDED
