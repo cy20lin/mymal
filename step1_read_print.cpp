@@ -1,19 +1,24 @@
-#include <iostream>
-#include <string>
 #include "reader.hpp"
 #include "types.hpp"
 #include "printer.hpp"
+#include <iostream>
+#include <string>
 
-std::string readline() {
+std::string readline(bool & ok, std::istream * in = nullptr) {
+    if (!in) in = &std::cin;
     std::string line;
-    std::getline(std::cin, line, '\n');
+    std::getline(*in, line, '\n');
+    ok = in->operator bool();
     return line;
 }
 
-MalType READ() {
-    const char* prompt = "user> ";
-    std::cout << prompt << std::flush;
-    return read_str(readline());
+void printline(std::string value, std::ostream * out = nullptr) {
+    if (!out) out = &std::cout;
+    *out << value << std::endl;
+}
+
+MalType READ(std::string str) {
+    return read_str(str);
 }
 
 MalType EVAL(MalType expr) {
@@ -21,22 +26,31 @@ MalType EVAL(MalType expr) {
     return value;
 }
 
-void printline(std::string value) {
-    std::cout << value << std::endl;
+std::string PRINT(MalType value) {
+    return pr_str(value);
 }
 
-void PRINT(MalType value) {
-    printline(pr_str(value));
+std::string rep(std::string str) {
+    MalType expr = READ(str);
+    MalType value = EVAL(expr);
+    std::string ostr = PRINT(value);
+    return ostr;
 }
 
-void rep() {
-    while(true) {
-        auto expr = READ();
-        if (!std::cin) break;
-        auto value = EVAL(expr);
-        PRINT(value);
-    }
-}
 int main() {
-    rep();
+    const char* prompt = "user> ";
+    bool ok = true;
+    while (true) {
+        std::cout << prompt << std::flush;
+        std::string input = readline(ok);
+        if (!ok)
+            break;
+        try {
+            std::string output = rep(input);
+            printline(output);
+        } catch (std::exception & e) {
+            printline(e.what(), &std::cerr);
+        }
+    }
+    return 0;
 }

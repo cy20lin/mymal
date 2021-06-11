@@ -97,8 +97,10 @@ public:
     MalType(const MalType&) = default;
     MalType& operator=(const MalType &) = default;
     MalType& operator=(MalType &&) = default;
-    MalTypeVariant & variant() {return *this;}
-    const MalTypeVariant & variant() const { return *this;}
+    MalTypeVariant & variant() & {return *this;}
+    MalTypeVariant && variant() && { return static_cast<MalTypeVariant&&>(*this);}
+    const MalTypeVariant & variant() const & { return *this;}
+    const MalTypeVariant && variant() const && {return static_cast<const MalTypeVariant&&>(*this);}
     template <std::size_t N> decltype(auto) get() {return std::get<N>(variant()); }
     template <typename T> decltype(auto) get() {return std::get<T>(variant()); }
     template <std::size_t N> decltype(auto) get_if() {return std::get_if<N>(variant()); }

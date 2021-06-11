@@ -1,48 +1,23 @@
-#include <utility>
-#include <iostream>
-#include <string>
-#include <tuple>
-#include <type_traits>
-#include <functional>
-
 #include "reader.hpp"
 #include "types.hpp"
 #include "printer.hpp"
 #include "utility.hpp"
+#include <iostream>
+#include <string>
 
-std::string readline() {
+std::string readline(bool & ok, std::istream * in = nullptr) {
+    if (!in) in = &std::cin;
     std::string line;
-    std::getline(std::cin, line, '\n');
+    std::getline(*in, line, '\n');
+    ok = in->operator bool();
     return line;
 }
 
-MalType READ() {
-    const char* prompt = "user> ";
-    std::cout << prompt << std::flush;
-    return read_str(readline());
+void printline(std::string value, std::ostream * out = nullptr) {
+    if (!out) out = &std::cout;
+    *out << value << std::endl;
 }
 
-MalType EVAL(MalType expr) {
-    MalType value = expr;
-    return value;
-}
-
-void printline(std::string value) {
-    std::cout << value << std::endl;
-}
-
-void PRINT(MalType value) {
-    printline(pr_str(value));
-}
-
-void rep() {
-    while(true) {
-        auto expr = READ();
-        if (!std::cin) break;
-        auto value = EVAL(expr);
-        PRINT(value);
-    }
-}
 
 template <std::size_t N>
 auto to_array_args(MalType args) -> std::array<MalType, N> {
@@ -70,69 +45,92 @@ template<std::size_t N, typename F>
 MalFunction wrap_fn(F fn) {
     return [fn](MalType args) -> MalType { 
         std::array<MalType, N> array_args = to_array_args<N>(args);
-        // return MalInt();
         return std::apply([&fn](auto ... args) {
             return std::visit(fn, args.variant()...);
         }, array_args);
     };
-    // return [fn](MalType args) -> MalType {
-    //     std::array<MalType, N> array_args = to_array_args<N>(args);
-    //     std::apply([&fn](auto && ... args) -> decltype(auto) {
-    //         return std::visit(fn, args.variant()...);
-    //     }, array_args);
-    // };
 }
-
-
 using Environment = MalMap; 
 Environment& get_repl_env() {
     static Environment e;
-    auto noop = [](auto&&...) -> MalUndefined { throw std::runtime_error("eval error: no such operator"); };
-    auto plus = fallback_overloaded {std::plus<>{}, noop};
-    // auto minus= overloaded { noop, std::minus<MalInt>{}, std::minus<MalFloat>{}, std::minus<MalString>{} };
-    // plus("a",MalUndefined{});
-    // plus(1,2);
-    // plus(1);
+    auto err = [](auto&&...) -> MalUndefined { throw std::runtime_error("eval error: no such operator"); };
+    auto add = overloaded {std::plus<MalInt>{}, std::plus<MalFloat>{}, std::plus<MalString>{}, err};
+    auto sub = overloaded {std::minus<MalInt>{}, std::minus<MalFloat>{}, std::minus<MalString>{}, err};
+    auto div = overloaded {std::divides<MalInt>{}, std::divides<MalFloat>{}, err};
+    auto mul = overloaded {std::multiplies<MalInt>{}, std::multiplies<MalFloat>{}, err};
+    auto mod = overloaded {std::modulus<MalInt>{}, std::modulus<MalFloat>{}, err};
 
-    // e[MalSymbol("+")] = wrap_fn<2>(noop);
-    // MalType args = MalList{MalInt(1),MalInt(2)};
-    // MalType res = wrap_fn<2>(plus)(args);
-
+    e[MalSymbol("+")] = wrap_fn<2>(add);
+    e[MalSymbol("-")] = wrap_fn<2>(sub);
+    e[MalSymbol("*")] = wrap_fn<2>(mul);
+    e[MalSymbol("/")] = wrap_fn<2>(div);
     return e;
 }
-struct FF {
-    template <typename A, typename B>
-    auto operator()(A a, B b) -> decltype(a+b) {return a+b;}
 
-};
-struct empty{};
+MalType eval_ast(MalType ast, Environment & env) {
+    if (MalSymbol *p = std::get_if<MalSymbol>(&ast.variant())) {
+        return env.at(ast);
+    } 
+    else if (MalList *p = std::get_if<MalList>(&ast.variant())) {
+        MalList list;
+        auto i = p->before_begin();
+        std::for_each(p->begin(), p->end(), [&](MalType& v){
+            i = list.insert_after(i, v);
+        });
+        return list;
+    } 
+    else {
+        return ast;
+    } 
+}
+
+MalType READ(std::string str) {
+    return read_str(str);
+}
+
+MalType EVAL(MalType ast, Environment & env) {
+    MalList *listp= std::get_if<MalList>(&ast.variant());
+    if (!listp) {
+        return eval_ast(ast, env);
+    } else if (listp->empty()) {
+        return ast;
+    } else {
+        MalList fn_args = std::get<MalList>(eval_ast(ast, env).variant());
+        MalFunction fn = std::move(std::get<MalFunction>(fn_args.front()));
+        fn_args.pop_front();
+        MalList& args = fn_args;
+        return fn(args);
+    }
+}
+
+std::string PRINT(MalType value) {
+    return pr_str(value);
+}
+
+
+std::string rep(std::string str, Environment & env) {
+    MalType expr = READ(str);
+    MalType value = EVAL(expr,env);
+    std::string ostr = PRINT(value);
+    return ostr;
+}
+
+
 int main() {
-    get_repl_env();
-    std::variant<bool, int, std::string> a = false;
-    std::variant<bool, int, std::string> b = true;
-    auto f = [](auto a, auto b)-> decltype(a+b){ return a;};
-    auto h = [](auto a, auto b)-> decltype(auto){ return a+b;};
-    auto g =  [](auto&&...){ std::cout << "a" << std::endl;};
-    auto fn = fallback_overloaded{
-        f,g
-    };
-
-    std::string s;
-    // std::cout << std::is_invocable_v<FF,bool,empty> << std::endl;
-    // std::cout << std::is_invocable_v<decltype(f),bool,empty> << std::endl;
-    // std::cout << std::is_invocable_v<decltype(h),bool,empty> << std::endl;
-    // std::cout << test_sfinae([]()->decltype(f(0,empty{}){}) << std::endl;
-    std::cout << fn(false,false)<< std::endl;
-    std::cout << fn(false,0)<< std::endl;
-    std::cout << fn(false,s)<< std::endl;
-    std::cout << fn(0,false)<< std::endl;
-    std::cout << fn(0,0)<< std::endl;
-    std::cout << fn(0,s)<< std::endl;
-    std::cout << fn(s,false)<< std::endl;
-    std::cout << fn(s,0) << std::endl;
-    std::cout << fn("","") << std::endl;
-    // std::visit(fn,a,b);
-
-
-    // rep();
+    const char* prompt = "user> ";
+    Environment & repl_env = get_repl_env();
+    bool ok = true;
+    while (true) {
+        std::cout << prompt << std::flush;
+        std::string input = readline(ok);
+        if (!ok)
+            break;
+        try {
+            std::string output = rep(input, repl_env);
+            printline(output);
+        } catch (std::exception & e) {
+            printline(e.what(), &std::cerr);
+        }
+    }
+    return 0;
 }
