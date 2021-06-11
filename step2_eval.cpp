@@ -135,7 +135,11 @@ MalType READ(std::string str) {
 MalType EVAL(MalType ast, Environment & env);
 MalType eval_ast(MalType ast, Environment & env) {
     if (MalSymbol *p = std::get_if<MalSymbol>(&ast.variant())) {
-        return env.at(ast);
+        auto i = env.find(*p);
+        if (i == env.end()) {
+            throw std::runtime_error("eval error: symbol not found");
+        }
+        return i->second;
     } 
     else if (MalList *p = std::get_if<MalList>(&ast.variant())) {
         MalList list;

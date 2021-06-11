@@ -63,7 +63,7 @@ struct MalFunction : MalFunctionBase {
 class MalSymbol : public std::string {
 public:
     template <typename ... Ts>
-    MalSymbol(Ts...ts): std::string(std::forward<Ts>(ts)...) {}
+    MalSymbol(Ts&&...ts): std::string(std::forward<Ts>(ts)...) {}
     MalSymbol(const MalSymbol &) = default;
     MalSymbol(MalSymbol &&) = default;
     // using std::string::operator=;
