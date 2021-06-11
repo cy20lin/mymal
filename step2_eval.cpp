@@ -54,16 +54,6 @@ MalFunction wrap_fn(F fn) {
 using Environment = MalMap; 
 Environment& get_repl_env() {
     static Environment e;
-    // auto err = [](auto&&...) -> MalUndefined { throw std::runtime_error("eval error: no such operator"); };
-    // auto add = overloaded {std::plus<MalInt>{}, std::plus<MalFloat>{}, std::plus<MalString>{}, err};
-    // auto sub = overloaded {std::minus<MalInt>{}, std::minus<MalFloat>{}, std::minus<MalString>{}, err};
-    // auto div = overloaded {std::divides<MalInt>{}, std::divides<MalFloat>{}, err};
-    // auto mul = overloaded {std::multiplies<MalInt>{}, std::multiplies<MalFloat>{}, err};
-    // auto mod = overloaded {std::modulus<MalInt>{}, std::modulus<MalFloat>{}, err};
-    // auto add = [](MalType args) -> MalType {
-    //     MalList list = std::get<MalList>(args.variant());
-    //     return MalInt(1);
-    // };
     auto add = [](MalType args) -> MalType {
         auto a = to_array_args<2>(args);
         if (a[0].get_if<MalInt>() && a[1].get_if<MalInt>()) {
@@ -154,6 +144,20 @@ MalType eval_ast(MalType ast, Environment & env) {
             i = list.insert_after(i, EVAL(v, env));
         });
         return list;
+    } 
+    else if (MalVector *p = std::get_if<MalVector>(&ast.variant())) {
+        MalVector vector;
+        std::for_each(p->begin(), p->end(), [&](MalType& v){
+            vector.push_back(EVAL(v, env));
+        });
+        return vector;
+    } 
+    else if (MalMap *p = std::get_if<MalMap>(&ast.variant())) {
+        MalMap map;
+        std::for_each(p->begin(), p->end(), [&](MalMap::value_type& v){
+            map.insert_or_assign(v.first, EVAL(v.second, env));
+        });
+        return map;
     } 
     else {
         return ast;
