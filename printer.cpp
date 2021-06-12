@@ -17,6 +17,7 @@ std::string pr_str(const MalType & value, bool print_readably) {
             out << arg << std::flush;
         }
         else if constexpr (std::is_same_v<T, MalFloat>){
+            // FIXME: float(2.0) prints 2 which is in the same form of int(2)
             out << arg << std::flush;
         }
         else if constexpr (std::is_same_v<T, MalSymbol>) {
