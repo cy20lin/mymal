@@ -19,50 +19,6 @@ void printline(std::string value, std::ostream * out = nullptr) {
     *out << value << std::endl;
 }
 
-
-std::vector<MalType> to_vector_args(MalType args) {
-    std::vector<MalType> result;
-    if (auto *p = std::get_if<MalList>(&args.variant())) {
-        std::copy(p->begin(), p->end(), std::back_inserter(result));
-    } 
-    else if (auto *p = std::get_if<MalVector>(&args.variant())) {
-        result = *p;
-    }
-    return result;
-    throw std::logic_error("eval error: invalid arguments type");
-};
-
-template <std::size_t N>
-auto to_array_args(MalType args) -> std::array<MalType, N> {
-    std::array<MalType, N> result;
-    if (auto *p = std::get_if<MalList>(&args.variant())) {
-        std::size_t i = 0;
-        std::copy_if(p->begin(), p->end(), result.begin(), [&i](auto&&) { return i++ < N; });
-        if (i  != N) {
-            throw std::logic_error("eval error: invalid arguments size " + std::to_string(i) + " expected " + std::to_string(N));
-        }
-    }
-    else if (auto *p = std::get_if<MalVector>(&args.variant())) {
-        std::size_t i = 0;
-        std::copy_if(p->begin(), p->end(), result.begin(), [&i](auto&&) { return i++ < N; });
-        if (i != N) {
-            throw std::logic_error("eval error: invalid arguments size " + std::to_string(i) + " expected " + std::to_string(N));
-        }
-    }
-    return result;
-    throw std::logic_error("eval error: invalid arguments type");
-};
-
-template<std::size_t N, typename F>
-MalFunction wrap_fn(F fn) {
-    return [fn](MalType args) -> MalType { 
-        std::array<MalType, N> array_args = to_array_args<N>(args);
-        return std::apply([&fn](auto ... args) {
-            return std::visit(fn, args.variant()...);
-        }, array_args);
-    };
-}
-
 using Environment = MalMap; 
 class Env;
 using EnvPtr = std::shared_ptr<Env>;

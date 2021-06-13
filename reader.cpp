@@ -61,7 +61,7 @@ MalType read_list(Reader & reader) {
         i = result.insert_after(i, read_form(reader));
     }
     token = reader.peek();
-    if (*token == ")") {
+    if (token && *token == ")") {
         reader.next();
         return result;
     } else {

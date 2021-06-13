@@ -2,6 +2,8 @@
 #include "types.hpp"
 #include "printer.hpp"
 #include "utility.hpp"
+#include "core.hpp"
+#include "env.hpp"
 #include <memory>
 #include <iostream>
 #include <string>
@@ -20,170 +22,10 @@ void printline(std::string value, std::ostream * out = nullptr) {
 }
 
 
-std::vector<MalType> to_vector_args(MalType args) {
-    std::vector<MalType> result;
-    if (auto *p = std::get_if<MalList>(&args.variant())) {
-        std::copy(p->begin(), p->end(), std::back_inserter(result));
-    } 
-    else if (auto *p = std::get_if<MalVector>(&args.variant())) {
-        result = *p;
-    }
-    return result;
-    throw std::logic_error("eval error: invalid arguments type");
-};
-
-template <std::size_t N>
-auto to_array_args(MalType args) -> std::array<MalType, N> {
-    std::array<MalType, N> result;
-    if (auto *p = std::get_if<MalList>(&args.variant())) {
-        std::size_t i = 0;
-        std::copy_if(p->begin(), p->end(), result.begin(), [&i](auto&&) { return i++ < N; });
-        if (i  != N) {
-            throw std::logic_error("eval error: invalid arguments size " + std::to_string(i) + " expected " + std::to_string(N));
-        }
-    }
-    else if (auto *p = std::get_if<MalVector>(&args.variant())) {
-        std::size_t i = 0;
-        std::copy_if(p->begin(), p->end(), result.begin(), [&i](auto&&) { return i++ < N; });
-        if (i != N) {
-            throw std::logic_error("eval error: invalid arguments size " + std::to_string(i) + " expected " + std::to_string(N));
-        }
-    }
-    return result;
-    throw std::logic_error("eval error: invalid arguments type");
-};
-
-template<std::size_t N, typename F>
-MalFunction wrap_fn(F fn) {
-    return [fn](MalType args) -> MalType { 
-        std::array<MalType, N> array_args = to_array_args<N>(args);
-        return std::apply([&fn](auto ... args) {
-            return std::visit(fn, args.variant()...);
-        }, array_args);
-    };
-}
-
-using Environment = MalMap; 
-class Env;
-using EnvPtr = std::shared_ptr<Env>;
-class Env {
-public:
-    Env() = default;
-    Env(const Env &) = default;
-    Env(Env &&) = default;
-    Env(std::shared_ptr<Env> outer) : outer_(outer), data_() {}
-    Env(std::shared_ptr<Env> outer, MalList binds, MalList exprs) : outer_(outer), data_() {
-        MalList::iterator ivalue = exprs.begin();
-        for (auto& bind : binds) {
-            if (!bind.get_if<MalSymbol>()) 
-                throw std::runtime_error("eval error: env: bind is not a symbol");
-            if (ivalue == exprs.end()) 
-                throw std::runtime_error("eval error: env: bind doesn't correspond to an expr");
-            data_.insert_or_assign(bind, *ivalue);
-            ++ivalue;
-        }
-        if (ivalue != exprs.end()) 
-            throw std::runtime_error("eval error: env: binds and exprs with different size");
-    }
-    void set(MalSymbol key, MalType value) {
-        data_.insert_or_assign(key, std::move(value));
-    }
-    MalType find(MalSymbol key) {
-        auto i = data_.find(key);
-        if (i != data_.end()) {
-            return i->second;
-        } else if (outer_) {
-            return outer_->find(key);
-        } else {
-            return MalUndefined();
-        }
-    }
-    MalType get(MalSymbol key) {
-        MalType value = find(key);
-        if (value.get_if<MalUndefined>()) {
-            throw std::runtime_error("env error: symbol '"+key+" not found");
-        } else {
-            return value;
-        }
-    }
-private:
-    std::shared_ptr<Env> outer_;
-    MalMap data_;
-};
 
 EnvPtr get_repl_env() {
     static EnvPtr env = std::make_shared<Env>();
-    auto add = [](MalType args) -> MalType {
-        auto a = to_array_args<2>(args);
-        if (a[0].get_if<MalInt>() && a[1].get_if<MalInt>()) {
-            return MalInt(a[0].get<MalInt>() + a[1].get<MalInt>());
-        }
-        if (a[0].get_if<MalInt>() && a[1].get_if<MalFloat>()) {
-            return MalFloat(a[0].get<MalInt>() + a[1].get<MalFloat>());
-        }
-        if (a[0].get_if<MalFloat>() && a[1].get_if<MalInt>()) {
-            return MalFloat(a[0].get<MalFloat>() + a[1].get<MalInt>());
-        }
-        if (a[0].get_if<MalFloat>() && a[1].get_if<MalFloat>()) {
-            return MalFloat(a[0].get<MalFloat>() + a[1].get<MalFloat>());
-        }
-        if (a[0].get_if<MalString>() && a[1].get_if<MalString>()) {
-            return MalString(a[0].get<MalString>() + a[1].get<MalString>());
-        }
-        throw std::runtime_error("eval error: add: invalid arguments");
-    };
-    auto sub = [](MalType args) -> MalType {
-        auto a = to_array_args<2>(args);
-        if (a[0].get_if<MalInt>() && a[1].get_if<MalInt>()) {
-            return MalInt(a[0].get<MalInt>() - a[1].get<MalInt>());
-        }
-        if (a[0].get_if<MalInt>() && a[1].get_if<MalFloat>()) {
-            return MalFloat(a[0].get<MalInt>() - a[1].get<MalFloat>());
-        }
-        if (a[0].get_if<MalFloat>() && a[1].get_if<MalInt>()) {
-            return MalFloat(a[0].get<MalFloat>() - a[1].get<MalInt>());
-        }
-        if (a[0].get_if<MalFloat>() && a[1].get_if<MalFloat>()) {
-            return MalFloat(a[0].get<MalFloat>() - a[1].get<MalFloat>());
-        }
-        throw std::runtime_error("eval error: sub: invalid arguments");
-    };
-    auto mul = [](MalType args) -> MalType {
-        auto a = to_array_args<2>(args);
-        if (a[0].get_if<MalInt>() && a[1].get_if<MalInt>()) {
-            return MalInt(a[0].get<MalInt>() * a[1].get<MalInt>());
-        }
-        if (a[0].get_if<MalInt>() && a[1].get_if<MalFloat>()) {
-            return MalFloat(a[0].get<MalInt>() * a[1].get<MalFloat>());
-        }
-        if (a[0].get_if<MalFloat>() && a[1].get_if<MalInt>()) {
-            return MalFloat(a[0].get<MalFloat>() * a[1].get<MalInt>());
-        }
-        if (a[0].get_if<MalFloat>() && a[1].get_if<MalFloat>()) {
-            return MalFloat(a[0].get<MalFloat>() * a[1].get<MalFloat>());
-        }
-        throw std::runtime_error("eval error: mul: invalid arguments");
-    };
-    auto div = [](MalType args) -> MalType {
-        auto a = to_array_args<2>(args);
-        if (a[0].get_if<MalInt>() && a[1].get_if<MalInt>()) {
-            return MalInt(a[0].get<MalInt>() / a[1].get<MalInt>());
-        }
-        if (a[0].get_if<MalInt>() && a[1].get_if<MalFloat>()) {
-            return MalFloat(a[0].get<MalInt>() / a[1].get<MalFloat>());
-        }
-        if (a[0].get_if<MalFloat>() && a[1].get_if<MalInt>()) {
-            return MalFloat(a[0].get<MalFloat>() / a[1].get<MalInt>());
-        }
-        if (a[0].get_if<MalFloat>() && a[1].get_if<MalFloat>()) {
-            return MalFloat(a[0].get<MalFloat>() / a[1].get<MalFloat>());
-        }
-        throw std::runtime_error("eval error: div: invalid arguments");
-    };
-    env->set(MalSymbol("+"), MalFunction(add));
-    env->set(MalSymbol("-"), MalFunction(sub));
-    env->set(MalSymbol("*"), MalFunction(mul));
-    env->set(MalSymbol("/"), MalFunction(div));
+    *env = *ns;
     return env;
 }
 
