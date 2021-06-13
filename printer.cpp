@@ -2,6 +2,7 @@
 #include <iostream>
 #include <sstream>
 #include <type_traits>
+#include <cmath>
 
 std::string pr_str(const MalType & value, bool print_readably) {
     const auto visitor = [](auto&& arg) -> std::string {
@@ -17,8 +18,12 @@ std::string pr_str(const MalType & value, bool print_readably) {
             out << arg << std::flush;
         }
         else if constexpr (std::is_same_v<T, MalFloat>){
-            // FIXME: float(2.0) prints 2 which is in the same form of int(2)
-            out << arg << std::flush;
+            out << arg;
+            bool is_integer = (std::floor(arg) == arg);
+            if (is_integer) {
+                out << "."; // with extra "." in the end to disinguish between int(2)
+            }
+            out << std::flush;
         }
         else if constexpr (std::is_same_v<T, MalSymbol>) {
             out <<  arg.str() << std::flush;
@@ -68,6 +73,9 @@ std::string pr_str(const MalType & value, bool print_readably) {
                 }
             }
         } 
+        else if constexpr (std::is_same_v<T, MalFunction>) {
+            out << "#<function:" << std::hex << arg.target_type().hash_code() << ">" << std::flush;
+        }
         else {
             static_assert("no such type");
         }
