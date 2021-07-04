@@ -30,7 +30,7 @@ MalType read_map(Reader & reader) {
     if (*token == "{"){
         reader.next();
     } else {
-        throw std::runtime_error("read error: invalid list begin, missing '{'");
+        throw std::runtime_error("read error: unbalanced map, missing '{'");
     }
     while(reader.peek() && *reader.peek() != "}") {
         auto k = read_form(reader);
@@ -44,7 +44,7 @@ MalType read_map(Reader & reader) {
         reader.next();
         return result;
     } else {
-        throw std::runtime_error("read error: invalid map end, missing '}'");
+        throw std::runtime_error("read error: unbalanced map, missing '}'");
     }
 }
 
@@ -54,7 +54,7 @@ MalType read_list(Reader & reader) {
     if (*token == "("){
         reader.next();
     } else {
-        throw std::runtime_error("read error: invalid list begin, missing '('");
+        throw std::runtime_error("read error: unbalanced list, missing '('");
     }
     auto i = result.before_begin();
     while(reader.peek() && *reader.peek() != ")") {
@@ -65,7 +65,7 @@ MalType read_list(Reader & reader) {
         reader.next();
         return result;
     } else {
-        throw std::runtime_error("read error: invalid list end, missing ')'");
+        throw std::runtime_error("read error: unbalanced list, missing ')'");
     }
 }
 
@@ -75,17 +75,17 @@ MalType read_vector(Reader & reader) {
     if (*token == "["){
         reader.next();
     } else {
-        throw std::runtime_error("read error: invalid list begin, missing '['");
+        throw std::runtime_error("read error: unbalanced vector, missing '['");
     }
     while(reader.peek() && *reader.peek() != "]") {
         result.push_back(read_form(reader));
     }
     token = reader.peek();
-    if (*token == "]") {
+    if (token && *token == "]") {
         reader.next();
         return result;
     } else {
-        throw std::runtime_error("read error: invalid list end, missing ']'");
+        throw std::runtime_error("read error: unbalanced vector, missing ']'");
     }
 }
 
@@ -123,9 +123,20 @@ MalType read_atom(Reader & reader) {
     } 
     if (is_string(*token)) {
         // TODO: parse string literal
-        return MalString(token->substr(1,token->size()-1));
+        return MalString(token->substr(1,token->size()-2));
     } 
     return MalSymbol(*token);
+}
+
+MalType read_comment(Reader & reader) {
+    auto token = reader.peek();
+    if (!token) throw std::runtime_error("read error: end of token");
+    reader.next();
+    if (token->front() == ';') {
+        return MalUndefined{};
+    } else {
+        throw std::runtime_error{"read error: not a comment"};
+    }
 }
 
 MalType read_form(Reader & reader) {
@@ -139,6 +150,8 @@ MalType read_form(Reader & reader) {
         result = read_vector(reader);
     } else if (*token == "{"){
         result = read_map(reader);
+    } else if (token->front() == ';') {
+        result = read_comment(reader);
     } else {
         result = read_atom(reader);
     }
