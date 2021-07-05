@@ -10,8 +10,10 @@ std::string to_escaped_string(std::string s) {
     out.push_back('\"');
     for (auto c : s) {
         switch (c) {
-        case '\'': out += "\\\'"; continue;
+        // case '\'': out += "\\\'"; continue;
+        case '\'': out += "\'"; continue;
         case '\"': out += "\\\""; continue;
+        case '\\': out += "\\\\"; continue;
         case '\a': out += "\\a"; continue;
         case '\b': out += "\\b"; continue;
         case '\f': out += "\\f"; continue;

@@ -47,7 +47,8 @@ int main() {
             break;
         try {
             std::string output = rep(input);
-            printline(output);
+            if (!output.empty()) // for comment
+                printline(output);
         } catch (std::exception & e) {
             printline(e.what(), &std::cerr);
         }

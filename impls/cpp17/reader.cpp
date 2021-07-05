@@ -123,6 +123,7 @@ std::string from_escaped_string(std::string s){
             switch (c) {
             case '\"': out.push_back('\"'); mode = NORMAL; ++pos; continue;
             case '\'': out.push_back('\''); mode = NORMAL; ++pos; continue;
+            case '\\': out.push_back('\\'); mode = NORMAL; ++pos; continue;
             case 'a': out.push_back('\a');  mode = NORMAL; ++pos; continue;
             case 'b': out.push_back('\b');  mode = NORMAL; ++pos; continue;
             case 'f': out.push_back('\f');  mode = NORMAL; ++pos; continue;
@@ -274,30 +275,18 @@ MalType read_atom(Reader & reader) {
     return MalSymbol(*token);
 }
 
-MalType read_comment(Reader & reader) {
-    auto token = reader.peek();
-    if (!token) throw std::runtime_error("read error: end of token");
-    reader.next();
-    if (token->front() == ';') {
-        return MalUndefined{};
-    } else {
-        throw std::runtime_error{"read error: not a comment"};
-    }
-}
-
 MalType read_form(Reader & reader) {
     MalType result;
     std::string* token = reader.peek();
     if (!token) {
-        throw std::runtime_error("read error: empty input");
+        ///NOTE: Ignore empty input by returning undefined value
+        return MalUndefined{};
     } else if (*token == "("){
         result = read_list(reader);
     } else if (*token == "["){
         result = read_vector(reader);
     } else if (*token == "{"){
         result = read_map(reader);
-    } else if (token->front() == ';') {
-        result = read_comment(reader);
     } else {
         result = read_atom(reader);
     }
@@ -321,10 +310,15 @@ std::vector<std::string> tokenize(std::string str) {
     static const std::regex re(R"raw(~@|[\[\]{}()'`~^@]|"(?:\\.|[^\\"])*"?|;.*|[^\s\[\]{}('"`,;)]+)raw"); 
     std::sregex_token_iterator tokens_begin(str.begin(), str.end(), re, 0), tokens_end;
     std::for_each(tokens_begin, tokens_end,[&](auto token){
-        result.push_back(token.str());
+        ///filter out the comment
+        ///TODO: need a better way to process comment and spaces
+        bool is_comment = token.str().front() == ';';
+        if (!is_comment)
+            result.push_back(token.str());
     });
-    // TODO: find a better way to check the space specification,
-    //       and for better error report.
+    ///NOTE: Then check if the non token part is good, i.e. is all space characters
+    ///TODO: find a better way to check the space specification,
+    ///      and for better error report.
     std::sregex_token_iterator spaces_begin(str.begin(), str.end(), re, -1), spaces_end;
     std::for_each(spaces_begin, spaces_end,[&](auto space){
         std::string space_ = space.str();
