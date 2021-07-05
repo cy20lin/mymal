@@ -176,6 +176,7 @@ int main() {
             break;
         try {
             std::string output = rep(input, repl_env);
+            if (output.empty()) continue; // for comment
             printline(output);
         } catch (std::exception & e) {
             printline(e.what(), &std::cerr);

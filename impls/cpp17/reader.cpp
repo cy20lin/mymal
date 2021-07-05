@@ -244,9 +244,16 @@ MalType read_atom(Reader & reader) {
         return s == "true" || s == "false";
     };
     static const auto is_integer = [](std::string s) {
+        auto f = s.front();
+        if (!s.empty() && (f == '-' || f == '+'))
+            s = s.substr(1);
         return !s.empty() && s.find_first_not_of("0123456789") == std::string::npos;
     };
     static const auto is_float = [](std::string s) {
+        ///FIXME: implement the scientific notation
+        auto f = s.front();
+        if (!s.empty() && (f == '-' || f == '+'))
+            s = s.substr(1);
         return !s.empty() && s.find_first_not_of("0123456789.") == std::string::npos;
     };
     static const auto is_string = [](std::string s) {
