@@ -4,6 +4,40 @@
 #include <type_traits>
 #include <cmath>
 
+std::string to_escaped_string(std::string s) {
+    char oct[] = "01234567";
+    std::string out;
+    out.push_back('\"');
+    for (auto c : s) {
+        switch (c) {
+        case '\'': out += "\\\'"; continue;
+        case '\"': out += "\\\""; continue;
+        case '\a': out += "\\a"; continue;
+        case '\b': out += "\\b"; continue;
+        case '\f': out += "\\f"; continue;
+        case '\n': out += "\\n"; continue;
+        case '\r': out += "\\r"; continue;
+        case '\t': out += "\\t"; continue;
+        case '\v': out += "\\v"; continue;
+        }
+        if (std::isprint(c)) {
+            out.push_back(c);
+        } else {
+            unsigned char a = c;
+            char data[]= {
+                '\\',
+                oct[a / 8u / 8u],
+                oct[a / 8u % 8u],
+                oct[a % 8u],
+                '\0'};
+            out += data;
+        }
+        
+    }
+    out.push_back('\"');
+    return out;
+}
+
 std::string pr_str(const MalType & value, bool print_readably) {
     const auto visitor = [](auto&& arg) -> std::string {
         using T = std::decay_t<decltype(arg)>;
@@ -30,7 +64,8 @@ std::string pr_str(const MalType & value, bool print_readably) {
         }
         else if constexpr (std::is_same_v<T, MalString>){
             // FIXME: escape some special character, eg. '\n' '\\'
-            out << "\"" << arg << "\"" << std::flush;
+            // out << "\"" << arg << "\"" << std::flush;
+            out << to_escaped_string(arg) << std::flush;
         }
         else if constexpr (std::is_same_v<T, MalList>) {
             if (arg.empty()) {
